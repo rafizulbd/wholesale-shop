@@ -91,16 +91,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 text-center bg-white">
-        <div className="flex justify-center items-center gap-2 mb-4 opacity-50">
-           <ShoppingBag size={20} />
-           <span className="font-black uppercase tracking-tighter">পাইকারি শপ</span>
-        </div>
-        <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">
-          &copy; ২০২৬ পাইকারি বিজনেস প্লাটফর্ম | সর্বস্বত্ব সংরক্ষিত
-        </p>
-      </footer>
+{/* Footer Section Update */}
+<footer className="py-12 text-center bg-white border-t border-gray-100">
+  <div className="flex justify-center items-center gap-2 mb-4 opacity-50">
+     <ShoppingBag size={20} />
+     <span className="font-black uppercase tracking-tighter">পাইকারি শপ</span>
+  </div>
+  <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">
+    &copy; ২০২৬ পাইকারি বিজনেস প্লাটফর্ম | সর্বস্বত্ব সংরক্ষিত
+  </p>
+  {/* Md. Rafizul Islam */}
+  <p className="text-gray-500 font-bold text-[12px] mt-2">
+    Developed by: <span className="text-blue-600">Md. Rafizul Islam</span>
+  </p>
+</footer>
     </div>
   );
 }
