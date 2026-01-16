@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   PlusCircle, Package, Loader2, DollarSign, TrendingUp, 
   ShoppingBag, CheckCircle, Clock, Printer, FileDown, 
-  FileText, LogOut, Search, LayoutDashboard, User
+  FileText, LogOut, Search, LayoutDashboard, Phone, MapPin
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   }, [router]);
 
   const fetchStatsAndOrders = async () => {
+    // এখানে সরাসরি কাস্টমারের মেটাডাটা সহ অর্ডার আনা হচ্ছে
     const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
     if (orderData) {
       setOrders(orderData);
@@ -62,7 +63,7 @@ export default function AdminDashboard() {
       quantity: parseInt(product.qty), min_order_qty: parseInt(product.min_qty)
     }]);
     if (!error) {
-      alert("পণ্য সেভ হয়েছে!");
+      alert("পণ্য সেভ হয়েছে!");
       setProduct({ name: '', price: '', buy_price: '', qty: '', min_qty: '1' });
       fetchStatsAndOrders();
     }
@@ -71,10 +72,14 @@ export default function AdminDashboard() {
 
   const updateStatus = async (order, newStatus) => {
     const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', order.id);
+    
+    // ডেলিভারি হলে স্টক থেকে বিয়োগ করার লজিক
     if (newStatus === 'delivered' && !error) {
       const { data: pData } = await supabase.from('products').select('quantity').eq('id', order.product_id).single();
       if (pData) await supabase.from('products').update({ quantity: pData.quantity - order.quantity }).eq('id', order.product_id);
     }
+    
+    alert(`অর্ডারটি ${newStatus} হয়েছে।`);
     fetchStatsAndOrders();
   };
 
@@ -82,7 +87,7 @@ export default function AdminDashboard() {
     const ws = XLSX.utils.json_to_sheet(orders);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sales");
-    XLSX.writeFile(wb, "Full_Report.xlsx");
+    XLSX.writeFile(wb, "Business_Report.xlsx");
   };
 
   const downloadPDFInvoice = (order) => {
@@ -100,11 +105,14 @@ export default function AdminDashboard() {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
-        <head><title>Print Invoice</title><style>body{font-family:sans-serif;padding:30px;} .box{border:1px solid #eee;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #eee;padding:10px;text-align:left;}</style></head>
+        <head><title>Print Invoice</title><style>body{font-family:sans-serif;padding:30px;} .box{border:1px solid #eee;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #eee;padding:10px;text-align:left;} .info{margin-bottom:20px; font-size:14px;}</style></head>
         <body>
           <div class="box">
-            <h1 style="text-align:center">পাইকারি শপ ইনভয়েস</h1>
-            <p>অর্ডার আইডি: #${order.id.slice(0,8)}</p>
+            <h1 style="text-align:center">পাইকারি শপ ইনভয়েস</h1>
+            <div class="info">
+              <p>অর্ডার আইডি: #${order.id.slice(0,8)}</p>
+              <p>কাস্টমার আইডি: ${order.user_id}</p>
+            </div>
             <table>
               <tr><th>পণ্য</th><th>পরিমাণ</th><th>মোট মূল্য</th></tr>
               <tr><td>${order.product_name}</td><td>${order.quantity} টি</td><td>${order.total_price} ৳</td></tr>
@@ -123,18 +131,18 @@ export default function AdminDashboard() {
   return (
     <div className="flex min-h-screen bg-gray-50 text-black font-sans">
       {/* Sidebar */}
-      <div className="w-20 md:w-64 bg-blue-950 text-white p-4 md:p-6 flex flex-col justify-between shadow-2xl">
+      <div className="w-20 md:w-64 bg-blue-950 text-white p-4 md:p-6 flex flex-col justify-between shadow-2xl transition-all">
         <div>
           <h2 className="hidden md:block text-xl font-black mb-10 border-b border-blue-800 pb-4 uppercase">অ্যাডমিন কন্ট্রোল</h2>
           <nav className="space-y-4">
             <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-blue-600 shadow-lg' : 'hover:bg-blue-900'}`}>
-              <LayoutDashboard size={20}/> <span className="hidden md:block font-bold">ড্যাশবোর্ড</span>
+              <LayoutDashboard size={20}/> <span className="hidden md:block font-bold">ইনভেন্টরি</span>
             </button>
             <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-blue-600 shadow-lg' : 'hover:bg-blue-900'}`}>
               <ShoppingBag size={20}/> <span className="hidden md:block font-bold">অর্ডারসমূহ</span>
             </button>
             <button onClick={downloadExcel} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-green-700 text-green-300 border border-green-900/30">
-              <FileDown size={20}/> <span className="hidden md:block font-bold">রিপোর্ট</span>
+              <FileDown size={20}/> <span className="hidden md:block font-bold text-sm">রিপোর্ট</span>
             </button>
           </nav>
         </div>
@@ -147,28 +155,27 @@ export default function AdminDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-white p-6 rounded-3xl shadow-sm border-b-4 border-green-500">
-            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black">Total Sales <TrendingUp size={14}/></div>
+            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black tracking-widest">Total Sales <TrendingUp size={14}/></div>
             <div className="text-3xl font-black">{stats.totalSales} ৳</div>
           </div>
           <div className="bg-white p-6 rounded-3xl shadow-sm border-b-4 border-blue-500">
-            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black">Net Profit <DollarSign size={14}/></div>
+            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black tracking-widest">Net Profit <DollarSign size={14}/></div>
             <div className="text-3xl font-black text-blue-600">{stats.totalProfit} ৳</div>
           </div>
           <div className="bg-white p-6 rounded-3xl shadow-sm border-b-4 border-orange-500">
-            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black">Orders <ShoppingBag size={14}/></div>
+            <div className="flex justify-between items-center text-gray-400 mb-2 uppercase text-[10px] font-black tracking-widest">Orders <ShoppingBag size={14}/></div>
             <div className="text-3xl font-black text-orange-600">{stats.orderCount} টি</div>
           </div>
         </div>
 
         {activeTab === 'inventory' ? (
-          /* Inventory Form */
           <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 max-w-2xl animate-in slide-in-from-bottom-5">
             <h2 className="text-2xl font-black mb-8 text-blue-950 uppercase flex items-center gap-3"><PlusCircle size={24}/> নতুন পণ্য যোগ</h2>
             <div className="space-y-5">
               <input type="text" placeholder="পণ্যের নাম" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 bg-gray-50/50" value={product.name} onChange={e => setProduct({...product, name: e.target.value})} />
               <div className="grid grid-cols-2 gap-4">
-                <input type="number" placeholder="কেনা দাম ৳" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-red-400 bg-red-50/20" value={product.buy_price} onChange={e => setProduct({...product, buy_price: e.target.value})} />
-                <input type="number" placeholder="বিক্রয় দাম ৳" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-green-400 bg-green-50/20" value={product.price} onChange={e => setProduct({...product, price: e.target.value})} />
+                <input type="number" placeholder="কেনা দাম ৳" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-red-400 bg-red-50/20 shadow-inner shadow-red-50" value={product.buy_price} onChange={e => setProduct({...product, buy_price: e.target.value})} />
+                <input type="number" placeholder="বিক্রয় দাম ৳" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-green-400 bg-green-50/20 shadow-inner shadow-green-50" value={product.price} onChange={e => setProduct({...product, price: e.target.value})} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <input type="number" placeholder="স্টক পরিমাণ" className="w-full border-2 border-gray-50 p-4 rounded-2xl outline-none focus:border-blue-500 bg-gray-50/50" value={product.qty} onChange={e => setProduct({...product, qty: e.target.value})} />
@@ -180,10 +187,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         ) : (
-          /* Orders Table View */
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 className="text-2xl font-black text-blue-950 uppercase flex items-center gap-3 self-start"><Clock size={24}/> সাম্প্রতিক অর্ডারসমূহ</h2>
+                <h2 className="text-2xl font-black text-blue-950 uppercase flex items-center gap-3 self-start"><Clock size={24}/> অর্ডার তালিকা</h2>
                 <div className="relative w-full md:w-64">
                     <Search className="absolute left-3 top-3.5 text-gray-300" size={18}/>
                     <input type="text" placeholder="সার্চ অর্ডার..." className="w-full pl-10 pr-4 py-3 bg-white border rounded-2xl outline-none focus:ring-2 ring-blue-500" onChange={e => setSearchTerm(e.target.value)}/>
@@ -192,22 +198,32 @@ export default function AdminDashboard() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredOrders.length > 0 ? filteredOrders.map(order => (
-                <div key={order.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center hover:shadow-md transition-all">
-                  <div>
-                    <h4 className="font-black text-gray-800 uppercase text-sm">{order.product_name}</h4>
+                <div key={order.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-all">
+                  <div className="mb-4">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-black text-gray-800 uppercase text-sm tracking-tighter">{order.product_name}</h4>
+                      <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase ${order.status === 'delivered' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{order.status}</span>
+                    </div>
                     <p className="text-[11px] font-bold text-gray-400 mt-1 uppercase">{order.quantity} টি | {order.total_price} ৳</p>
-                    <span className={`inline-block mt-2 text-[8px] font-black px-3 py-1 rounded-full uppercase ${order.status === 'delivered' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>{order.status}</span>
+                    
+                    {/* কাস্টমার ডিটেইলস সেকশন */}
+                    <div className="mt-3 p-3 bg-gray-50 rounded-2xl space-y-1 text-xs font-bold text-gray-600 border border-gray-100">
+                      <div className="flex items-center gap-2 text-blue-600 uppercase tracking-tighter shadow-sm"><Phone size={12}/> কাস্টমার আইডি: {order.user_id.slice(0,10)}...</div>
+                    </div>
                   </div>
+
                   <div className="flex gap-2">
                     <button onClick={() => downloadPDFInvoice(order)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><FileText size={18}/></button>
                     <button onClick={() => printInvoice(order)} className="p-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-800 hover:text-white transition-all"><Printer size={18}/></button>
                     {order.status !== 'delivered' && (
-                      <button onClick={() => updateStatus(order, 'delivered')} className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all"><CheckCircle size={18}/></button>
+                      <button onClick={() => updateStatus(order, 'delivered')} className="flex-1 py-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white font-black uppercase text-xs transition-all flex items-center justify-center gap-2">
+                        <CheckCircle size={18}/> ডেলিভারি কনফার্ম
+                      </button>
                     )}
                   </div>
                 </div>
               )) : (
-                <div className="col-span-full text-center py-20 text-gray-400 font-bold italic">কোনো অর্ডার পাওয়া যায়নি।</div>
+                <div className="col-span-full text-center py-20 text-gray-400 font-bold italic border-2 border-dashed border-gray-200 rounded-3xl">কোনো অর্ডার পাওয়া যায়নি।</div>
               )}
             </div>
           </div>

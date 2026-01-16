@@ -4,8 +4,10 @@ import { supabase } from '../../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingCart, Package, Info, AlertCircle, Clock, 
-  CheckCircle, LogOut, ListOrdered, User, ShoppingBag, Phone, MapPin
+  CheckCircle, LogOut, ListOrdered, User, ShoppingBag, FileText 
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function UserCatalog() {
   const [products, setProducts] = useState([]);
@@ -53,6 +55,30 @@ export default function UserCatalog() {
     router.push('/login');
   };
 
+  const downloadInvoice = (order) => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text("Business Order Memo", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(`Order ID: ${order.id.slice(0,8)}`, 20, 40);
+    doc.text(`Date: ${new Date(order.created_at).toLocaleDateString()}`, 20, 45);
+    doc.text(`Customer: ${user?.user_metadata?.full_name}`, 20, 50);
+
+    doc.autoTable({
+      startY: 60,
+      head: [['Product Name', 'Quantity', 'Unit Price', 'Total']],
+      body: [[
+        order.product_name, 
+        order.quantity, 
+        `${order.total_price / order.quantity} TK`, 
+        `${order.total_price} TK`
+      ]],
+    });
+    
+    doc.text(`Grand Total: ${order.total_price} TK`, 150, doc.lastAutoTable.finalY + 10);
+    doc.save(`Memo_${order.id.slice(0,5)}.pdf`);
+  };
+
   const handleOrder = async (product) => {
     const isOutOfStock = product.quantity <= 0;
     const actionText = isOutOfStock ? "প্রি-অর্ডার" : "অর্ডার";
@@ -78,17 +104,17 @@ export default function UserCatalog() {
       }]);
 
       if (error) throw error;
-      alert(`আপনার ${actionText} সফল হয়েছে!`);
+      alert(`আপনার ${actionText} সফল হয়েছে! পেমেন্ট ইনস্ট্রাকশন ফলো করুন।`);
       fetchMyOrders(user.id);
     } catch (err) {
-      alert("সমস্যা হয়েছে: " + err.message);
+      alert("সমস্যা হয়েছে: " + err.message);
     }
   };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-      <p className="text-blue-600 font-bold">লোড হচ্ছে...</p>
+      <p className="text-blue-600 font-bold tracking-widest uppercase text-xs">অপেক্ষা করুন...</p>
     </div>
   );
 
@@ -112,6 +138,18 @@ export default function UserCatalog() {
         </button>
       </header>
 
+      {/* Payment Instruction Notice */}
+      <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-8 rounded-2xl shadow-sm animate-pulse">
+        <div className="flex items-center gap-2 mb-1">
+          <AlertCircle className="text-orange-600" size={18} />
+          <h3 className="font-bold text-orange-800 uppercase text-xs tracking-wider">পেমেন্ট ইনস্ট্রাকশন:</h3>
+        </div>
+        <p className="text-orange-700 text-sm leading-relaxed">
+          অর্ডার কনফার্ম করতে মোট টাকার <strong>২৫% অগ্রিম</strong> প্রদান করুন। 
+          বিকাশ/নগদ (পার্সোনাল): <strong>০১৭XXXXXXXX</strong>। রেফারেন্সে আপনার নাম লিখুন।
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Products Section */}
         <div className="lg:col-span-2 space-y-6">
@@ -128,7 +166,7 @@ export default function UserCatalog() {
                 </div>
                 <div>
                   <h3 className="text-base md:text-lg font-bold text-gray-800 mb-1 mt-2 line-clamp-1">{item.name}</h3>
-                  <div className="text-2xl font-black text-blue-600 mb-4">{item.price} ৳ <span className="text-[10px] text-gray-400 font-bold">/ ইউনিট</span></div>
+                  <div className="text-2xl font-black text-blue-600 mb-4">{item.price} ৳ <span className="text-[10px] text-gray-400 font-bold">/ পিস</span></div>
                   <div className="bg-blue-50/50 p-2 rounded-xl mb-4 flex items-center gap-2 text-[10px] font-bold text-blue-700">
                     <Info size={14} /> মিনিমাম অর্ডার: {item.min_order_qty} টি
                   </div>
@@ -146,7 +184,7 @@ export default function UserCatalog() {
           <h2 className="text-lg font-black text-gray-800 flex items-center gap-2 px-2 uppercase tracking-wide">
             <ListOrdered className="text-blue-600" size={20} /> আমার অর্ডারসমূহ
           </h2>
-          <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4 max-h-[500px] md:max-h-[700px] overflow-y-auto custom-scrollbar">
+          <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
             {myOrders.length > 0 ? (
               myOrders.map((order) => (
                 <div key={order.id} className="p-4 border rounded-2xl bg-gray-50 hover:bg-white transition-all border-gray-100 relative group">
@@ -159,9 +197,15 @@ export default function UserCatalog() {
                       {order.status}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold text-gray-400">
-                    <span>{order.quantity} টি | {order.total_price} ৳</span>
-                    <span>{new Date(order.created_at).toLocaleDateString('bn-BD')}</span>
+                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 mt-2 border-t pt-2">
+                    <div>{order.quantity} টি | {order.total_price} ৳</div>
+                    <button 
+                      onClick={() => downloadInvoice(order)} 
+                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+                      title="মেমো ডাউনলোড"
+                    >
+                      <FileText size={14} /> মেমো
+                    </button>
                   </div>
                 </div>
               ))
