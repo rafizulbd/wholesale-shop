@@ -22,7 +22,7 @@ export default function LoginPage() {
     if (error) {
       alert("ইমেল অথবা পাসওয়ার্ড ভুল! আবার চেষ্টা করুন।");
     } else {
-      // লগইন সফল হলে সরাসরি অ্যাডমিন ড্যাশবোর্ডে পাঠাবে
+      // লগইন সফল হলে সরাসরি ড্যাশবোর্ডে পাঠাবে
       router.push('/admin');
     }
     setLoading(false);
@@ -33,10 +33,13 @@ export default function LoginPage() {
       <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl w-full max-w-md">
         <div className="flex flex-col items-center mb-10">
           <div className="bg-blue-100 p-4 rounded-full mb-4">
-             <Lock className="text-blue-900" size={32} />
+              <Lock className="text-blue-900" size={32} />
           </div>
-          <h2 className="text-3xl font-black text-blue-900 uppercase">অ্যাডমিন লগইন</h2>
-          <p className="text-gray-500 mt-2 text-sm">আপনার তথ্য দিয়ে প্রবেশ করুন</p>
+          {/* আপনার রিকোয়েস্ট অনুযায়ী নাম পরিবর্তন করা হয়েছে */}
+          <h2 className="text-2xl md:text-3xl font-black text-blue-900 uppercase text-center leading-tight">
+            বিজনেস পোর্টাল লগইন
+          </h2>
+          <p className="text-gray-500 mt-2 text-sm">আপনার তথ্য দিয়ে প্রবেশ করুন</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -55,7 +58,7 @@ export default function LoginPage() {
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-bold text-gray-700 mb-2">পাসওয়ার্ড</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">পাসওয়ার্ড</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3.5 text-gray-400" size={20} />
               <input 
@@ -78,8 +81,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-gray-400 text-xs uppercase tracking-widest">Wholesale Business Panel v1.0</p>
+        <div className="mt-8 text-center border-t pt-6">
+          <p className="text-gray-400 text-xs uppercase tracking-widest">Wholesale Business Portal v1.0</p>
         </div>
       </div>
     </div>
